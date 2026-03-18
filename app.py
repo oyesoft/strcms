@@ -52,14 +52,11 @@ else:
         if not enrolled_courses:
             st.info("Enroll in a course from the Available Courses section below.")
 
-        # Helper function to handle video URLs
         def play_video(url):
             if not url:
                 st.info("No video URL provided for this lesson.")
                 return
-            # Detect YouTube full URLs
             youtube_match = re.match(r'(https?://)?(www\.)?youtube\.com/watch\?v=[\w-]+', url)
-            # Detect raw MP4 URLs
             mp4_match = url.endswith(".mp4")
             if youtube_match or mp4_match:
                 st.video(url)
@@ -71,16 +68,12 @@ else:
             lessons = db.get_lessons(course[0])
             for lesson in lessons:
                 completed = db.get_lesson_progress(st.session_state.user_id, lesson[0])
-
-                # Play video
                 play_video(lesson[2])
-
                 st.write(f"**{lesson[1]}** - {'✅ Completed' if completed else '❌ Not Completed'}")
-
                 if not completed and st.button(f"Mark {lesson[1]} as Completed", key=f"complete_{lesson[0]}"):
                     db.mark_lesson_completed(st.session_state.user_id, lesson[0])
                     st.success(f"Lesson '{lesson[1]}' marked completed!")
-                    completed = 1  # update local variable
+                    completed = 1
 
         st.subheader("Available Courses to Enroll")
         all_courses = db.get_courses()
@@ -100,15 +93,30 @@ else:
             db.add_course(course_title, course_desc)
             st.success("Course added!")
 
-        st.subheader("Add Lesson to Course")
+        st.subheader("Manage Lessons")
         courses = db.get_courses()
         if courses:
             course_options = {c[1]: c[0] for c in courses}
             selected_course = st.selectbox("Select Course", options=list(course_options.keys()))
+
+            # Add new lesson
+            st.markdown("**Add New Lesson**")
             lesson_title = st.text_input("Lesson Title", key="lesson_title")
             video_url = st.text_input("Video URL (YouTube/MP4 link)", key="lesson_video")
             if st.button("Add Lesson"):
                 db.add_lesson(course_options[selected_course], lesson_title, video_url)
                 st.success(f"Lesson '{lesson_title}' added to {selected_course}!")
+
+            # List existing lessons with delete buttons
+            st.markdown("**Existing Lessons**")
+            lessons = db.get_lessons(course_options[selected_course])
+            if lessons:
+                for l in lessons:
+                    st.write(f"**{l[1]}** - {l[2] if l[2] else 'No video URL'}")
+                    if st.button(f"Delete {l[1]}", key=f"delete_{l[0]}"):
+                        db.delete_lesson(l[0])
+                        st.success(f"Lesson '{l[1]}' deleted!")
+            else:
+                st.info("No lessons for this course yet.")
         else:
             st.info("Please add a course first.")
