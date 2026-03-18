@@ -1,5 +1,6 @@
 import streamlit as st
 import database as db
+import re
 
 st.set_page_config(page_title="Free LMS with Videos", layout="wide")
 st.title("📚 LMS with Video Lessons (Free Hosting)")
@@ -45,40 +46,57 @@ else:
         st.session_state.logged_in = False
 
     # ---------------- Universal Video Player ----------------
-    import re
-
     def play_video(url):
         """
-        Play YouTube, YouTube Live, Vimeo, MP4, or any embed-compatible URL.
+        Play YouTube (normal/watch, live, youtu.be short), Vimeo, or MP4.
+        Universal embed method for free hosting.
         """
         if not url:
             st.info("No video URL provided for this lesson.")
             return
 
-        # YouTube standard video
-        if "youtube.com/watch" in url:
-            video_id = url.split("v=")[-1]
+        embed_url = None
+
+        # YouTube normal video
+        match_normal = re.match(r'.*youtube\.com/watch\?v=([\w-]+)', url)
+        if match_normal:
+            video_id = match_normal.group(1)
             embed_url = f"https://www.youtube.com/embed/{video_id}"
-        # YouTube Live
-        elif "youtube.com/live" in url:
-            video_id = url.split("/")[-1]
+
+        # YouTube short URL youtu.be
+        match_short = re.match(r'.*youtu\.be/([\w-]+)', url)
+        if match_short:
+            video_id = match_short.group(1)
+            embed_url = f"https://www.youtube.com/embed/{video_id}"
+
+        # YouTube Live URL
+        match_live = re.match(r'.*youtube\.com/live/([\w-]+)', url)
+        if match_live:
+            video_id = match_live.group(1)
             embed_url = f"https://www.youtube.com/embed/{video_id}?autoplay=0"
+
         # Vimeo
-        elif "vimeo.com" in url:
-            video_id = url.split("/")[-1]
+        match_vimeo = re.match(r'.*vimeo\.com/(\d+)', url)
+        if match_vimeo:
+            video_id = match_vimeo.group(1)
             embed_url = f"https://player.vimeo.com/video/{video_id}"
+
         # Direct MP4
-        elif url.endswith(".mp4"):
+        if url.endswith(".mp4"):
             st.video(url)
             return
-        # Fallback: embed directly
-        else:
-            embed_url = url
 
-        st.markdown(f"""
+        # Fallback iframe embed
+        if embed_url:
+            st.markdown(f"""
             <iframe width="700" height="400" src="{embed_url}" 
             frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <iframe width="700" height="400" src="{url}" 
+            frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            """, unsafe_allow_html=True)
 
     # ---------------- Student Dashboard ----------------
     if st.session_state.role == "student":
@@ -126,7 +144,7 @@ else:
             # Add new lesson
             st.markdown("**Add New Lesson**")
             lesson_title = st.text_input("Lesson Title", key="lesson_title")
-            video_url = st.text_input("Video URL (YouTube/Vimeo/MP4/Live/Embed)", key="lesson_video")
+            video_url = st.text_input("Video URL (YouTube/Vimeo/MP4/Embed)", key="lesson_video")
             if st.button("Add Lesson"):
                 db.add_lesson(course_options[selected_course], lesson_title, video_url)
                 st.success(f"Lesson '{lesson_title}' added to {selected_course}!")
