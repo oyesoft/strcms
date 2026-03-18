@@ -24,7 +24,6 @@ if not st.session_state.logged_in:
             st.session_state.role = user[1]
             st.session_state.username = username
             st.success(f"Welcome {username}!")
-            st.experimental_rerun()
         else:
             st.error("Invalid credentials")
 
@@ -44,7 +43,6 @@ else:
     st.sidebar.write(f"Logged in as: {st.session_state.username} ({st.session_state.role})")
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
-        st.experimental_rerun()
 
     # ---------------- Student View ----------------
     if st.session_state.role == "student":
@@ -62,7 +60,7 @@ else:
                 if not completed and st.button(f"Mark {l[1]} as Completed", key=f"complete_{l[0]}"):
                     db.mark_lesson_completed(st.session_state.user_id, l[0])
                     st.success(f"Lesson '{l[1]}' marked completed!")
-                    st.experimental_rerun()
+                    completed = 1  # update local variable
 
         st.subheader("Available Courses to Enroll")
         all_courses = db.get_courses()
@@ -72,7 +70,6 @@ else:
                 if st.button(f"Enroll in {c[1]}", key=f"enroll_{c[0]}"):
                     db.enroll_course(st.session_state.user_id, c[0])
                     st.success(f"Enrolled in {c[1]}!")
-                    st.experimental_rerun()
 
     # ---------------- Admin View ----------------
     elif st.session_state.role == "admin":
@@ -82,15 +79,16 @@ else:
         if st.button("Add Course"):
             db.add_course(title, desc)
             st.success("Course added!")
-            st.experimental_rerun()
 
         st.subheader("Add Lesson to Course")
         courses = db.get_courses()
         course_options = {c[1]: c[0] for c in courses}
-        selected_course = st.selectbox("Select Course", options=list(course_options.keys()))
-        lesson_title = st.text_input("Lesson Title", key="lesson_title")
-        video_url = st.text_input("Video URL", key="lesson_video")
-        if st.button("Add Lesson"):
-            db.add_lesson(course_options[selected_course], lesson_title, video_url)
-            st.success(f"Lesson added to {selected_course}!")
-            st.experimental_rerun()
+        if courses:
+            selected_course = st.selectbox("Select Course", options=list(course_options.keys()))
+            lesson_title = st.text_input("Lesson Title", key="lesson_title")
+            video_url = st.text_input("Video URL", key="lesson_video")
+            if st.button("Add Lesson"):
+                db.add_lesson(course_options[selected_course], lesson_title, video_url)
+                st.success(f"Lesson added to {selected_course}!")
+        else:
+            st.info("Please add a course first.")
