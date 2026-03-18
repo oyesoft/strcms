@@ -1,8 +1,8 @@
 import streamlit as st
 import database as db
 
-st.set_page_config(page_title="LMS with Videos", layout="wide")
-st.title("📚 LMS with Video Lessons")
+st.set_page_config(page_title="Free LMS with Videos", layout="wide")
+st.title("📚 LMS with Video Lessons (Free Hosting)")
 
 # ---------------- Session State ----------------
 if "logged_in" not in st.session_state:
@@ -44,51 +44,59 @@ else:
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
 
-    # ---------------- Student View ----------------
+    # ---------------- Student Dashboard ----------------
     if st.session_state.role == "student":
         st.subheader("My Courses")
-        courses = db.get_enrolled_courses(st.session_state.user_id)
-        if not courses:
+        enrolled_courses = db.get_enrolled_courses(st.session_state.user_id)
+        if not enrolled_courses:
             st.info("Enroll in a course from the Available Courses section below.")
-        for c in courses:
-            st.write(f"### {c[1]} - {c[2]}")
-            lessons = db.get_lessons(c[0])
-            for l in lessons:
-                completed = db.get_lesson_progress(st.session_state.user_id, l[0])
-                st.video(l[2]) if l[2] else st.write("No video URL provided")
-                st.write(f"**{l[1]}** - {'✅ Completed' if completed else '❌ Not Completed'}")
-                if not completed and st.button(f"Mark {l[1]} as Completed", key=f"complete_{l[0]}"):
-                    db.mark_lesson_completed(st.session_state.user_id, l[0])
-                    st.success(f"Lesson '{l[1]}' marked completed!")
+
+        for course in enrolled_courses:
+            st.write(f"### {course[1]} - {course[2]}")
+            lessons = db.get_lessons(course[0])
+            for lesson in lessons:
+                completed = db.get_lesson_progress(st.session_state.user_id, lesson[0])
+
+                # Display video if URL exists
+                if lesson[2]:
+                    st.video(lesson[2])
+                else:
+                    st.info(f"Lesson '{lesson[1]}' has no video URL.")
+
+                st.write(f"**{lesson[1]}** - {'✅ Completed' if completed else '❌ Not Completed'}")
+
+                if not completed and st.button(f"Mark {lesson[1]} as Completed", key=f"complete_{lesson[0]}"):
+                    db.mark_lesson_completed(st.session_state.user_id, lesson[0])
+                    st.success(f"Lesson '{lesson[1]}' marked completed!")
                     completed = 1  # update local variable
 
         st.subheader("Available Courses to Enroll")
         all_courses = db.get_courses()
-        for c in all_courses:
-            if c not in courses:
-                st.write(f"**{c[1]}** - {c[2]}")
-                if st.button(f"Enroll in {c[1]}", key=f"enroll_{c[0]}"):
-                    db.enroll_course(st.session_state.user_id, c[0])
-                    st.success(f"Enrolled in {c[1]}!")
+        for course in all_courses:
+            if course not in enrolled_courses:
+                st.write(f"**{course[1]}** - {course[2]}")
+                if st.button(f"Enroll in {course[1]}", key=f"enroll_{course[0]}"):
+                    db.enroll_course(st.session_state.user_id, course[0])
+                    st.success(f"Enrolled in {course[1]}!")
 
-    # ---------------- Admin View ----------------
+    # ---------------- Admin Dashboard ----------------
     elif st.session_state.role == "admin":
         st.subheader("Add Course")
-        title = st.text_input("Course Title")
-        desc = st.text_area("Course Description")
+        course_title = st.text_input("Course Title")
+        course_desc = st.text_area("Course Description")
         if st.button("Add Course"):
-            db.add_course(title, desc)
+            db.add_course(course_title, course_desc)
             st.success("Course added!")
 
         st.subheader("Add Lesson to Course")
         courses = db.get_courses()
-        course_options = {c[1]: c[0] for c in courses}
         if courses:
+            course_options = {c[1]: c[0] for c in courses}
             selected_course = st.selectbox("Select Course", options=list(course_options.keys()))
             lesson_title = st.text_input("Lesson Title", key="lesson_title")
-            video_url = st.text_input("Video URL", key="lesson_video")
+            video_url = st.text_input("Video URL (YouTube/MP4 link)", key="lesson_video")
             if st.button("Add Lesson"):
                 db.add_lesson(course_options[selected_course], lesson_title, video_url)
-                st.success(f"Lesson added to {selected_course}!")
+                st.success(f"Lesson '{lesson_title}' added to {selected_course}!")
         else:
             st.info("Please add a course first.")
