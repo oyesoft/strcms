@@ -1,18 +1,21 @@
 import sqlite3
 import os
 
+# ---------------- Database Setup ----------------
 DB_FILE = "data/lms.db"
 os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
 
 def get_connection():
+    """Get SQLite connection"""
     conn = sqlite3.connect(DB_FILE, check_same_thread=False)
     return conn
 
 def setup_db():
+    """Create all tables if they don't exist"""
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Users
+    # Users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,7 +25,7 @@ def setup_db():
         )
     ''')
 
-    # Courses
+    # Courses table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +34,7 @@ def setup_db():
         )
     ''')
 
-    # Lessons
+    # Lessons table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS lessons (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +45,7 @@ def setup_db():
         )
     ''')
 
-    # Enrollments
+    # Enrollments table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS enrollments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +56,7 @@ def setup_db():
         )
     ''')
 
-    # Progress
+    # Progress table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +130,7 @@ def get_enrolled_courses(user_id):
 def add_lesson(course_id, title, video_url):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO lessons (course_id, title, video_url) VALUES (?, ?, ?)", 
+    cursor.execute("INSERT INTO lessons (course_id, title, video_url) VALUES (?, ?, ?)",
                    (course_id, title, video_url))
     conn.commit()
     conn.close()
@@ -139,6 +142,15 @@ def get_lessons(course_id):
     lessons = cursor.fetchall()
     conn.close()
     return lessons
+
+# ---------------- Delete Lesson ----------------
+def delete_lesson(lesson_id):
+    """Delete a lesson by its ID"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM lessons WHERE id=?", (lesson_id,))
+    conn.commit()
+    conn.close()
 
 # ---------------- Progress Functions ----------------
 def mark_lesson_completed(user_id, lesson_id):
@@ -160,5 +172,5 @@ def get_lesson_progress(user_id, lesson_id):
     conn.close()
     return result[0] if result else 0
 
-# ---------------- Initialize DB ----------------
+# ---------------- Initialize Database ----------------
 setup_db()
