@@ -45,23 +45,36 @@ else:
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
 
+    # ---------------- Helper Function ----------------
+    def play_video(url):
+        if not url:
+            st.info("No video URL provided for this lesson.")
+            return
+
+        # Regular YouTube video
+        youtube_match = re.match(r'(https?://)?(www\.)?youtube\.com/watch\?v=[\w-]+', url)
+        # Raw MP4
+        mp4_match = url.endswith(".mp4")
+        # YouTube live
+        live_match = re.match(r'(https?://)?(www\.)?youtube\.com/live/[\w-]+', url)
+
+        if youtube_match or mp4_match:
+            st.video(url)
+        elif live_match:
+            video_id = url.split("/")[-1]
+            st.markdown(f"""
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/{video_id}" 
+            frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            """, unsafe_allow_html=True)
+        else:
+            st.warning(f"Cannot play video: '{url}'. Use YouTube watch?v=... or raw .mp4 link.")
+
     # ---------------- Student Dashboard ----------------
     if st.session_state.role == "student":
         st.subheader("My Courses")
         enrolled_courses = db.get_enrolled_courses(st.session_state.user_id)
         if not enrolled_courses:
             st.info("Enroll in a course from the Available Courses section below.")
-
-        def play_video(url):
-            if not url:
-                st.info("No video URL provided for this lesson.")
-                return
-            youtube_match = re.match(r'(https?://)?(www\.)?youtube\.com/watch\?v=[\w-]+', url)
-            mp4_match = url.endswith(".mp4")
-            if youtube_match or mp4_match:
-                st.video(url)
-            else:
-                st.warning(f"Cannot play video: '{url}'. Use YouTube full URL or raw .mp4 link.")
 
         for course in enrolled_courses:
             st.write(f"### {course[1]} - {course[2]}")
@@ -102,7 +115,7 @@ else:
             # Add new lesson
             st.markdown("**Add New Lesson**")
             lesson_title = st.text_input("Lesson Title", key="lesson_title")
-            video_url = st.text_input("Video URL (YouTube/MP4 link)", key="lesson_video")
+            video_url = st.text_input("Video URL (YouTube/MP4/Live link)", key="lesson_video")
             if st.button("Add Lesson"):
                 db.add_lesson(course_options[selected_course], lesson_title, video_url)
                 st.success(f"Lesson '{lesson_title}' added to {selected_course}!")
