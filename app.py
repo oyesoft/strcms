@@ -24,20 +24,22 @@ if not st.session_state.logged_in:
             st.session_state.role = user[1]
             st.session_state.username = username
             st.success(f"Welcome {username}!")
+            st.experimental_rerun()
         else:
             st.error("Invalid credentials")
 
     st.subheader("Register")
     new_username = st.text_input("New Username", key="reg_user")
     new_password = st.text_input("New Password", type="password", key="reg_pass")
-    if st.button("Register"):
+    role = st.selectbox("Role", ["student", "admin"])
+    if st.button("Register User"):
         try:
-            db.add_user(new_username, new_password)
+            db.add_user(new_username, new_password, role)
             st.success("User registered! Please login.")
         except:
             st.error("Username already exists.")
 
-# ---------------- Student Dashboard ----------------
+# ---------------- Dashboard ----------------
 else:
     st.sidebar.write(f"Logged in as: {st.session_state.username} ({st.session_state.role})")
     if st.sidebar.button("Logout"):
