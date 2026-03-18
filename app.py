@@ -1,5 +1,6 @@
 import streamlit as st
 import database as db
+import re
 
 st.set_page_config(page_title="Free LMS with Videos", layout="wide")
 st.title("📚 LMS with Video Lessons (Free Hosting)")
@@ -51,17 +52,28 @@ else:
         if not enrolled_courses:
             st.info("Enroll in a course from the Available Courses section below.")
 
+        # Helper function to handle video URLs
+        def play_video(url):
+            if not url:
+                st.info("No video URL provided for this lesson.")
+                return
+            # Detect YouTube full URLs
+            youtube_match = re.match(r'(https?://)?(www\.)?youtube\.com/watch\?v=[\w-]+', url)
+            # Detect raw MP4 URLs
+            mp4_match = url.endswith(".mp4")
+            if youtube_match or mp4_match:
+                st.video(url)
+            else:
+                st.warning(f"Cannot play video: '{url}'. Use YouTube full URL or raw .mp4 link.")
+
         for course in enrolled_courses:
             st.write(f"### {course[1]} - {course[2]}")
             lessons = db.get_lessons(course[0])
             for lesson in lessons:
                 completed = db.get_lesson_progress(st.session_state.user_id, lesson[0])
 
-                # Display video if URL exists
-                if lesson[2]:
-                    st.video(lesson[2])
-                else:
-                    st.info(f"Lesson '{lesson[1]}' has no video URL.")
+                # Play video
+                play_video(lesson[2])
 
                 st.write(f"**{lesson[1]}** - {'✅ Completed' if completed else '❌ Not Completed'}")
 
