@@ -3,7 +3,7 @@ import database as db
 import re
 
 st.set_page_config(page_title="Oyesoft Class Management System", layout="wide")
-st.title("📚 Student Dashboard")
+st.title("📚 Oyesoft Dashboard")
 
 # ---------------- Session State ----------------
 if "logged_in" not in st.session_state:
